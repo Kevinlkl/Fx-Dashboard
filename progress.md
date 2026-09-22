@@ -70,6 +70,10 @@ Full reasoning in `docs/data_cleaning.md`. Do not re-derive these:
 - **Missing dates:** forward-fill for payment lookups, drop for returns. Never
   mix.
 - **Nulls become absent rows**, not null rows. Interest rates stored long.
+- **The firm stays fictional** (KL Trading Sdn Bhd, USD 18,000/month). Considered
+  swapping in a real large-cap (TNB, Mr DIY, Capital A) and rejected it: big
+  firms already hedge with treasury desks, their exposure is not RM 1M, and
+  attaching a real name to invented numbers is worse than an honest fiction.
 
 ## Findings worth keeping
 
@@ -78,6 +82,22 @@ Full reasoning in `docs/data_cleaning.md`. Do not re-derive these:
   spot, not rates.
 - That premium **flips sign in 2023** — positive 2015-2022, negative 2023-2026.
   Any backtest on recent data only will flatter forward hedging.
+
+## Framing notes (for the README and any economics-literate reader)
+
+- **Results are scale-invariant.** "Cut cost volatility by X%" is a percentage;
+  hedge ratios are fractions. RM 1M is a *default input* to the scenario
+  simulator, not a premise. Say this explicitly in the README — it reframes the
+  fictional firm as a worked example of a general tool.
+- **Why a firm should hedge at all.** In frictionless markets hedging adds no
+  value (Modigliani-Miller); shareholders can diversify FX risk themselves. The
+  defensible friction here is the **SME credit constraint**: a small importer
+  hit by a 17% cost rise cannot easily raise capital, so cash-flow variance
+  turns into forgone orders. Use that argument, not "management likes budget
+  certainty", which reads as managerial risk aversion.
+- **CIP does not hold exactly in practice.** Since 2008 there is a persistent
+  cross-currency basis, especially for non-major currencies. Our synthetic
+  forwards assume CIP holds. State this as a limitation before anyone raises it.
 
 ## Next session: Phase 2
 
@@ -109,3 +129,10 @@ Estimate 3-4 hours. `validate.py` is where the time goes.
 User types all code themselves and wants to learn — explain the reasoning and
 give code to type, do not write project files unprompted. Documentation and
 analysis scripts are fine to write when asked.
+
+User is an experienced data scientist but **entirely new to finance**. Introduce
+and explain every finance term when it first comes up, and explain the reasoning
+behind analytics, cleaning and visualisation choices too — not the mechanics of
+pandas, but why *this* technique for *this* problem (why an as-of join here, why
+block bootstrap over iid, why QLIKE over RMSE). Add new terms to
+`docs/glossary.md` as they arise.
