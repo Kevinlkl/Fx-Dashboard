@@ -77,7 +77,7 @@ Full reasoning in `docs/data_cleaning.md`. Do not re-derive these:
 
 ## Findings worth keeping
 
-- 1-month forward premium averages +0.25 sen; sd of a one-month spot move is
+- 1-month forward premium averages +0.28 sen; sd of a one-month spot move is
   9.30 sen. Carry is ~3% of the risk being hedged, so results will be driven by
   spot, not rates.
 - That premium **flips sign in 2023** — positive 2015-2022, negative 2023-2026.

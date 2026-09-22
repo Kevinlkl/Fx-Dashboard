@@ -57,7 +57,7 @@ coverage drops off sharply:
 | Tenor | Days quoted (of 2,868) | Median staleness if forward-filled | p90 | Worst | Days on a >30d old rate |
 |---|---|---|---|---|---|
 | 1-month | 1,882 (66%) | 0 days | 6 days | 27 days | 0 |
-| 3-month | 1,009 (35%) | 3 days | 23 days | 100 days | 195 (7%) |
+| 3-month | 1,009 (35%) | 2 days | 22 days | 100 days | 187 (7%) |
 
 Forward-filling the 1-month rate is close to harmless. Half the time there is a
 quote that same day, and it is never more than a month old. Forward-filling the
@@ -116,6 +116,12 @@ change.
 - **Interbank starts 2015-06-05**, not January. Anything needing a MYR rate —
   which is all forward pricing — effectively begins mid-2015. The FX series
   itself is complete from 2015-01-02.
+- **The two BNM series do not share a calendar.** 397 of the 1,882 one-month
+  interbank quotes (and 162 of the 1,009 three-month ones) fall on days with no
+  FX quote at all, including weekends. Staleness therefore has to be measured
+  against *every* published quote, not only those landing on FX trading days —
+  measuring it the second way overstates staleness. `merge_asof` gets this
+  right; a manual walk over the FX calendar does not.
 - **SOFR starts 2018.** It did not exist before that. Overnight cross-checks
   cannot cover the early sample.
 - **No real forward quotes exist in any free source.** I checked BNM's
@@ -132,7 +138,7 @@ change.
 - Duplicates on `(date, currency, session)`: 0. The composite primary key plus
   `ON CONFLICT DO UPDATE` makes re-ingestion idempotent by construction.
 - Nulls in `selling`: 0 across all 2,868 rows.
-- Daily % change: sd 0.408%, range -2.90% to +2.36%. 57 moves beyond 3sd.
+- Daily log return: sd 0.408%, range -2.94% to +2.34%. 56 moves beyond 3sd.
   Flagged, not removed. Those are real events (Aug 2015, Mar 2020) and deleting
   them would remove exactly the periods hedging is meant to protect against.
 - `ingest_log` records source, scope, row count and status for every request, so
@@ -140,7 +146,7 @@ change.
 
 ## One thing that surprised me
 
-The 1-month forward premium averages +0.25 sen. The standard deviation of a
+The 1-month forward premium averages +0.28 sen. The standard deviation of a
 one-month spot move is 9.30 sen. So the interest-rate carry is about 3% of the
 size of the risk being hedged, which means small errors in the rate leg barely
 matter, and the results will be driven almost entirely by spot moves.
@@ -148,9 +154,9 @@ matter, and the results will be driven almost entirely by spot moves.
 It also flips sign. Positive every year 2015-2022, negative from 2023 onward:
 
 ```
-2015 +1.14   2018 +0.49   2021 +0.62   2024 -0.65
-2016 +1.02   2019 +0.41   2022 +0.08   2025 -0.33
-2017 +0.81   2020 +0.66   2023 -0.73   2026 -0.22
+2015 +1.15   2018 +0.53   2021 +0.62   2024 -0.68
+2016 +1.04   2019 +0.40   2022 +0.23   2025 -0.35
+2017 +0.84   2020 +0.66   2023 -0.68   2026 -0.21
 ```
 
 Forward hedging cost this importer a small premium for eight years, then started

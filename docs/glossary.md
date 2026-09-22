@@ -29,6 +29,38 @@ backwards.
 **Exposure** — the amount of foreign currency you are on the hook for. Ours is
 USD 18,000 a month, USD 216,000 a year.
 
+## Derivatives
+
+**Derivative** — a contract whose value is *derived* from something else. A
+forward on USD/MYR is worthless on its own; its value comes entirely from where
+spot goes. Forwards, futures, options and swaps are all derivatives, so this
+project is a derivatives project.
+
+**Underlying** — the thing the value derives from. Here, USD/MYR spot.
+
+**Notional** — the face amount a derivative references. Ours is USD 18,000. No
+one exchanges the notional; it only sizes the payoff. Headlines quoting
+"trillions in derivatives" are quoting notional, which overstates money at risk
+by orders of magnitude.
+
+**OTC vs exchange-traded** — forwards are over-the-counter: negotiated
+bilaterally with a bank, any amount, any date. Futures are standardised and
+exchange-traded with daily margin. An SME needing exactly USD 18,000 on exactly
+the 31st uses a forward.
+
+**Linear vs non-linear** — a forward's value changes by the same amount for
+every unit spot moves (`∂V/∂S` is constant), so it is linear. An option's
+sensitivity varies with where spot sits, so it is non-linear. Linear means the
+hedge never needs rebalancing, which is one reason SMEs prefer forwards.
+
+**Delta** — `∂V/∂S`, how much a derivative's value moves per unit move in the
+underlying. For options it is also called the **hedge ratio**, which is the same
+quantity our strategies choose. For a forward it is simply the notional.
+
+**Gamma, and the Greeks** — gamma is `∂²V/∂S²`, how fast delta itself moves. The
+family of such sensitivities are the Greeks. Not needed here, since forwards
+have constant delta and zero gamma.
+
 ## Hedging
 
 **Hedge** — a transaction taken to reduce uncertainty about a future price, not
@@ -107,10 +139,10 @@ work.
 **Forward premium / discount** — `F − S`. Positive (premium) means the forward
 rate sits above spot, so hedging costs the importer slightly more than buying
 today. Negative (discount) means the reverse. Our measured 1-month premium
-averages +0.25 sen and flipped negative in 2023.
+averages +0.28 sen and flipped negative in 2023.
 
 **Carry** — informal term for that same premium: the built-in cost or benefit of
-holding a hedge. Our key finding is that carry (+0.25 sen) is tiny next to spot
+holding a hedge. Our key finding is that carry (+0.28 sen) is tiny next to spot
 risk (9.30 sen), so it barely moves the results.
 
 **Synthetic pricing** — deriving a price from a formula because no observed
