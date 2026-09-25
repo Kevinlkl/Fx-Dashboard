@@ -5,7 +5,7 @@ the project. It is rewritten, not appended to — history lives in
 `docs/sessions/`, which does not need reading unless you are chasing *why* a
 past decision was made.
 
-Last updated: 2026-09-25 (session 2)
+Last updated: 2026-09-25 (session 2, Phase 4 done)
 
 ## Status
 
@@ -15,8 +15,8 @@ Last updated: 2026-09-25 (session 2)
 | 1 — Ingestion | **done** |
 | 2 — Cleaning | **done** |
 | 3 — EDA | **done** (6 figures) |
-| 4 — Modelling / backtest | next |
-| 5 — Dashboard | not started |
+| 4 — Modelling / backtest | **done** |
+| 5 — Dashboard | next |
 | 6 — Packaging | not started |
 
 ## What the project is
@@ -128,21 +128,66 @@ Six figures in `docs/figures/`, built by `src/figures.py`:
 6. **Budget** — **76 of 135 months over budget** (56%), worst month RM 16,917
    over. This is the README's opening image.
 
-## Next session: Phase 4
+## Phase 4 results (done)
 
-1. `forwards.py` — CIP pricing off `daily_panel`, tenor 1 month.
-2. `backtest.py` — strategies A (no hedge), B (100% forward), C (50% static),
-   D (layered ladder), E (GARCH-triggered).
-3. Walk-forward GARCH with `arch`, expanding window, refit at each decision
-   date. Evaluate out-of-sample with QLIKE.
-4. **Block** bootstrap for CIs on variance reduction — see the overlapping
-   observations entry in the glossary for why iid resampling is wrong here.
-5. Write `strategy_results` with **rate components kept separate**
-   (spot_rate, forward_rate, hedge_ratio), not just `myr_cost` — Power BI would
-   need the pieces to recompute under a different ratio.
+`forwards.py` (134 contracts, CIP with ACT/365 MYR and ACT/360 USD),
+`volatility.py` (127 walk-forward GARCH forecasts), `backtest.py`,
+`bootstrap.py`.
 
-Open: does Strategy E survive walk-forward? Given finding 5, expect it not to
-beat a static policy by much.
+**The plan's main KPI was wrong.** "sd of monthly cost" barely moves under a
+rolling 1-month hedge, because the forward you lock is essentially spot from a
+month earlier (corr 0.897, sd 0.2207 vs 0.2212). Full hedging cuts it 0.2%.
+The KPI that matters is **planning error** — sd of (actual cost minus the cost
+known at the decision date). Keep cost sd, but demote it and explain why it
+barely moves.
+
+| strategy | planning err | cost sd | worst overrun | total cost |
+|---|---|---|---|---|
+| A unhedged | 1,816 | 3,994 | 16,917 | 10,302,605 |
+| B 100% | **0** | 3,985 | 17,156 | 10,304,896 |
+| C 50% | 908 | 3,886 | **15,759** | 10,303,750 |
+| MV h=0.511 | 888 | **3,886** | 15,790 | 10,303,777 |
+| E GARCH trigger | 810 | 3,848 | 15,759 | 10,297,553 |
+| E fair control (h=0.60) | 725 | 3,889 | 16,040 | 10,303,981 |
+
+Bootstrap (stationary, block 14.9 months from Politis-White, 2000 reps, n=134):
+
+- total cost 100% vs unhedged **+0.02% [-0.26, +0.30]** — hedging is FREE
+- cost sd MV vs unhedged **-2.72% [-5.70, -0.53]** — real but small
+- planning err E vs control +11.63% [-4.47, +23.85] — **no detectable difference**
+- cost sd E vs control -1.05% [-1.61, -0.06] — significant but economically nil
+- cvar95 MV vs unhedged -0.31% [-0.77, +0.09] — nothing on tails
+
+GARCH eval: RMSE 0.771 vs naive 0.764 (loses), QLIKE 0.372 vs 0.609 (wins
+clearly). GARCH over-forecasts (bias +0.215), which RMSE punishes and QLIKE
+forgives. Report both.
+
+**Conclusion.** Hedge 50-75% one month ahead. Certainty costs nothing; ~50%
+minimises dispersion and worst-month overrun; higher ratios buy more planning
+certainty. Skip volatility timing.
+
+**Scope changes.** Strategy D (layered ladder) dropped — needs 3/6-month
+forwards that the data cannot price. Replaced by a 0-100% hedge-ratio frontier
+(`hedge_frontier` table), which is more informative anyway.
+
+**Caveats to state.** Only ~9 effective independent blocks at n=134, so tail
+CIs are wide. Max-based statistics (worst overrun) bootstrap badly; CVaR is the
+stable tail metric. Six comparisons at 95% means ~1 expected false positive.
+
+## Next session: Phase 5
+
+Dashboard. Decision deferred: Streamlit (free public link, Python end-to-end)
+vs Power BI (no public link without a Pro licence and a work email; strong
+signal for Malaysian BI roles). Recommended: Streamlit primary, .pbix as a
+second artifact.
+
+Tables ready to drive it: `daily_panel`, `forwards`, `strategy_results`,
+`hedge_frontier`, `vol_forecasts`, `bootstrap_ci`. All carry rate components
+separately so a BI tool can recompute cost at any hedge ratio.
+
+Pages: market overview; strategy comparison (frontier scatter is the key
+visual); scenario simulator (exposure, hedge ratio, bank spread, date range);
+methodology.
 
 ## Working agreement
 
