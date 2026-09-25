@@ -64,6 +64,19 @@ def min_variance_ratio(f):
     F, S = f.forward_rate, f.spot_payment
     return (S.var() - F.cov(S)) / (F.var() + S.var() - 2 * F.cov(S))
 
+def strategy_e(conn, f):
+    """GARCH-triggered: hedge fully when the forecast is in the top quartile.
+
+    The quantile must expand, not span the full sample - a full-sample
+    quantile uses forecasts that did not exist at the decision date.
+    """
+    v = pd.read_sql("SELECT payment_date, garch FROM vol_forecasts", conn,
+                    parse_dates=["payment_date"]).set_index("payment_date")
+    g = v.garch.reindex(f.index)
+    threshold = g.expanding(min_periods=12).quantile(0.75).shift(1)
+    return pd.Series(np.where(g > threshold, 1.0, 0.5),
+                     index=f.index).where(g.notna(), 0.5)
+
 
 def run(conn, spread=DEFAULT_SPREAD):
     f = build_forwards(conn).set_index("payment_date")
@@ -72,6 +85,9 @@ def run(conn, spread=DEFAULT_SPREAD):
     table = {name: kpis(f, h, spread, budget) for name, h in STATIC.items()}
     h_star = min_variance_ratio(f)
     table[f"MV_h={h_star:.2f}"] = kpis(f, h_star, spread, budget)
+    h_e = strategy_e(conn, f)
+    table["E_garch_trigger"] = kpis(f, h_e, spread, budget)
+    table[f"E_control_static_{h_e.mean():.2f}"] = kpis(f, h_e.mean(), spread, budget)
 
     frontier = pd.DataFrame([
         dict(hedge_ratio=h, **kpis(f, h, spread, budget))
@@ -79,7 +95,9 @@ def run(conn, spread=DEFAULT_SPREAD):
     ])
 
     rows = []
-    for name, h in list(STATIC.items()) + [(f"MV_h={h_star:.2f}", h_star)]:
+    strategies = (list(STATIC.items())
+                  + [(f"MV_h={h_star:.2f}", h_star), ("E_garch_trigger", h_e)])
+    for name, h in strategies:
         c = cost_of(f, h, spread)
         rows.append(pd.DataFrame({
             "strategy": name,
