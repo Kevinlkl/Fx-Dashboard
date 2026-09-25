@@ -45,6 +45,7 @@ def month_range(start_year):
             yield y, m
 
 def ingest_fx(conn, full=False):
+    """Fuck me sideways, one day i will fix this shitty ahh logic"""
     have = set() if full else months_present(conn, "fx_rates", "currency=? AND session=?", (CURRENCY, FX_SESSION))
     current = date.today().strftime("%Y-%m")
     total = 0
