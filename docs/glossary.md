@@ -200,6 +200,24 @@ in-sample volatility fit will always look good and means nothing.
 RMSE because it penalises under-forecasting risk more heavily than
 over-forecasting, which matches what actually hurts you.
 
+**Unbiasedness hypothesis / Fama regression** — the claim that the forward rate is
+an unbiased forecast of the future spot rate. Tested by regressing the realised
+spot move on the forward premium: if unbiased, the slope is 1. Our estimate is
+1.54 with a standard error of 1.40, so neither 0 nor 1 can be rejected and R-sq
+is 0.009. The forward carries no usable information about where spot is going,
+which is what makes this a variance problem rather than a forecasting one.
+
+**Overlapping observations** — sampling a k-period return every period, so
+consecutive observations share k-1 periods of data. The residuals end up heavily
+autocorrelated and standard errors come out far too small, manufacturing
+significance. We sample month-end to month-end instead: 135 clean observations
+beat 2,700 overlapping ones. Same reasoning drives the block bootstrap.
+
+**Q-Q plot** — observed quantiles against the quantiles a reference distribution
+predicts. Points on the diagonal mean the data matches; points bending away at
+both ends mean fat tails. Standardise the data first, or the diagonal compares
+two different scales and the plot lies.
+
 **Bootstrap** — resample your data many times to see how much a result would have
 varied by luck. Turns "reduced volatility 38%" into "38%, 95% CI 29-46%".
 

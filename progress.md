@@ -5,7 +5,7 @@ the project. It is rewritten, not appended to — history lives in
 `docs/sessions/`, which does not need reading unless you are chasing *why* a
 past decision was made.
 
-Last updated: 2026-09-21 (end of session 1)
+Last updated: 2026-09-25 (session 2)
 
 ## Status
 
@@ -13,9 +13,9 @@ Last updated: 2026-09-21 (end of session 1)
 |---|---|
 | 0 — Framing | done (scenario + KPIs settled) |
 | 1 — Ingestion | **done** |
-| 2 — Cleaning | next |
-| 3 — EDA | not started |
-| 4 — Modelling / backtest | not started |
+| 2 — Cleaning | **done** |
+| 3 — EDA | **done** (6 figures) |
+| 4 — Modelling / backtest | next |
 | 5 — Dashboard | not started |
 | 6 — Packaging | not started |
 
@@ -99,30 +99,50 @@ Full reasoning in `docs/data_cleaning.md`. Do not re-derive these:
   cross-currency basis, especially for non-major currencies. Our synthetic
   forwards assume CIP holds. State this as a limitation before anyone raises it.
 
-## Next session: Phase 2
+## Phase 2 output (done)
 
-Build the analysis-ready layer.
+`cleaning.py` builds `daily_panel` (2,868 rows): spot_sell, spot_mid, cost_rate,
+log_ret, myr_1m(+age), usd_1m(+age). `payment.py` writes 135 month-end payments
+from 2015-06. `validate.py` regenerates every figure in `data_cleaning.md` and
+exits non-zero on a broken invariant. `tests/test_clean.py` — 6 passing tests
+against an in-memory fixture. First date with both rate legs: **2015-06-08**,
+giving 2,763 usable rows.
 
-1. `src/clean.py` → materialise a `daily_panel` table: date, spot_mid,
-   spot_sell, cost_rate, log_ret, myr_1m, myr_1m_age, usd_1m, usd_1m_age.
-   Rebuild from scratch each run.
-2. As-of joins via `pd.merge_asof(..., direction='backward')`. Both frames must
-   be sorted. `direction='nearest'` would inject look-ahead — never use it.
-3. `_age` columns are the audit trail for the tenor decision. Keep them.
-4. `src/payments.py` → month-end USD 18,000 from 2015-06 into `payments`.
-5. `src/validate.py` → regenerate every number quoted in `data_cleaning.md`.
-   They are currently asserted, not reproducible. This is the real work.
-6. `tests/test_clean.py` → four tests, the important one being "as-of join never
-   returns a rate dated after the target date".
+## Phase 3 findings (done)
 
-Open decisions:
-- Bank spread as config constant or `clean.py` argument? (argument — the
-  dashboard simulator varies it)
-- Returns off `middle`, costing off `selling`. Agreed in principle, needs
-  stating explicitly somewhere or it reads as an inconsistency.
-- Trading calendar = "days BNM quoted", or a real MY holiday list?
+Six figures in `docs/figures/`, built by `src/figures.py`:
 
-Estimate 3-4 hours. `validate.py` is where the time goes.
+1. **Spot** — 3.51 (2015) to 4.79 peak (Apr 2024) to ~4.08 now.
+2. **Returns** — excess kurtosis **5.8**, Jarque-Bera p ~ 0. Worst day was a
+   **7.2-sigma** move; a normal over 2,867 draws tops out near 3.5. Justifies
+   CVaR and percentile risk measures over anything Gaussian.
+3. **Volatility** — 30-day annualised ranges **1.5% to 17.7%**, clustered not
+   scattered. Strategy E trigger (75th pct) = **6.9%**.
+4. **Rate differential** — crosses zero **Sep 2022**, months before the forward
+   premium flipped in 2023. This is the mechanism behind the headline finding.
+5. **Fama regression** — beta 1.54, se 1.40, R-sq **0.009**, p 0.27, n=135
+   non-overlapping. Cannot reject beta=0 *or* beta=1. **The forward carries no
+   usable signal about future spot.** Do NOT report 1.54 as a finding; it is
+   noise. This is what makes the project a variance problem, not a forecasting
+   one.
+6. **Budget** — **76 of 135 months over budget** (56%), worst month RM 16,917
+   over. This is the README's opening image.
+
+## Next session: Phase 4
+
+1. `forwards.py` — CIP pricing off `daily_panel`, tenor 1 month.
+2. `backtest.py` — strategies A (no hedge), B (100% forward), C (50% static),
+   D (layered ladder), E (GARCH-triggered).
+3. Walk-forward GARCH with `arch`, expanding window, refit at each decision
+   date. Evaluate out-of-sample with QLIKE.
+4. **Block** bootstrap for CIs on variance reduction — see the overlapping
+   observations entry in the glossary for why iid resampling is wrong here.
+5. Write `strategy_results` with **rate components kept separate**
+   (spot_rate, forward_rate, hedge_ratio), not just `myr_cost` — Power BI would
+   need the pieces to recompute under a different ratio.
+
+Open: does Strategy E survive walk-forward? Given finding 5, expect it not to
+beat a static policy by much.
 
 ## Working agreement
 
