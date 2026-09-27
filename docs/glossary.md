@@ -79,6 +79,23 @@ availability, documented in `data_cleaning.md`.
 is locked forward and half is bought at whatever spot turns out to be. Strategies
 A-E are really just different rules for setting this number.
 
+**Minimum-variance hedge ratio** — the hedge fraction that minimises the variance
+of the blended cost, `h* = [Var(S) − Cov(F,S)] / [Var(F) + Var(S) − 2Cov(F,S)]`.
+Ours is 0.511. It is interior rather than 0 or 1 because the forward and the
+eventual spot are correlated 0.897, not 1.0 — so blending them diversifies, the
+same way a two-asset portfolio is less volatile than either holding. The dip is
+shallow (2.7%) precisely because the correlation is high.
+
+**Diversification** — combining imperfectly correlated exposures to get less
+variance than either alone. `Var(hF + (1−h)S) = h²σ_F² + (1−h)²σ_S² +
+2h(1−h)σ_F σ_S ρ`. With ρ < 1 the minimum sits strictly between the endpoints.
+
+**Two notions of risk, and they disagree here.** *Realised dispersion* (sd of
+cost across months) is minimised at h ≈ 0.51. *Planning uncertainty* (sd of
+actual minus what was known at the decision date) is minimised at h = 1. The
+first is about the spread of a historical series, the second about what you knew
+when you committed. Say which one a number refers to.
+
 **Layered / laddered hedging** — hedging different fractions at different tenors
 (75% of next month, 50% of month three, and so on), so you are never fully
 committed to one rate. Standard corporate practice because it averages out
