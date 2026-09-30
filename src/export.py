@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from backtest import budget_series, strategy_e, DEFAULT_SPREAD
+from backtest import budget_series, strategy_e, run, DEFAULT_SPREAD
 from db import connect
 from forwards import build_forwards
 
@@ -47,11 +47,24 @@ def main():
     OUT.mkdir(exist_ok=True)
     conn = connect()
 
+    summary, frontier, _, h_star = run(conn)
+    s = summary.reset_index().rename(columns={"index": "strategy"})
+    # E_garch_trigger has no single ratio - it varies month to month.
+    s["hedge_ratio"] = s.strategy.map({
+        "A_no_hedge": 0.0, "B_full_forward": 1.0, "C_half_static": 0.5,
+        f"MV_h={h_star:.2f}": round(h_star, 3),
+    })
+
     tables = {
+        "strategy_summary": s,
         "payments_fact": payments_fact(conn),
-        "daily_panel": pd.read_sql(
+        "daily_panel": (lambda d: d.assign(
+            vol_30d=d.log_ret.rolling(30).std() * (252 ** 0.5) * 100,
+            vol_90d=d.log_ret.rolling(90).std() * (252 ** 0.5) * 100,
+            rate_diff=d.myr_1m - d.usd_1m,
+        ))(pd.read_sql(
             "SELECT date, spot_mid, spot_sell, cost_rate, log_ret, "
-            "myr_1m, usd_1m FROM daily_panel ORDER BY date", conn),
+            "myr_1m, usd_1m FROM daily_panel ORDER BY date", conn)),
         "hedge_frontier": pd.read_sql(
             "SELECT * FROM hedge_frontier ORDER BY hedge_ratio", conn),
         "bootstrap_ci": pd.read_sql("SELECT * FROM bootstrap_ci", conn),
